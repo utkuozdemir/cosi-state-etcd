@@ -11,6 +11,7 @@ import (
 	"errors"
 	"fmt"
 	"iter"
+	"log"
 	"sort"
 	"strconv"
 	"time"
@@ -581,7 +582,11 @@ func (st *State) watchKind(ctx context.Context, resourceKind resource.Kind, sing
 			}
 		}()
 
+		log.Printf("ETCDSTATE WATCHKIND %s: starting watch for %q with revision %d", opName, resourceKind, revision)
+
 		if options.BootstrapContents {
+			log.Printf("ETCDSTATE WATCHKIND %s: bootstrapping %q with %d resources", opName, resourceKind, len(bootstrapList))
+
 			switch {
 			case singleCh != nil:
 				for _, res := range bootstrapList {
@@ -628,7 +633,11 @@ func (st *State) watchKind(ctx context.Context, resourceKind resource.Kind, sing
 			bootstrapList = nil
 		}
 
+		log.Printf("BEFORE BOOKMARK %s: sending bookmark for %q with revision %d", opName, resourceKind, revision)
+
 		if options.BootstrapBookmark {
+			log.Printf("IN BOOKMARK %s: sending bookmark for %q with revision %d", opName, resourceKind, revision)
+
 			event := state.Event{
 				Type:     state.Noop,
 				Resource: resource.NewTombstone(resource.NewMetadata(resourceKind.Namespace(), resourceKind.Type(), "", resource.VersionUndefined)),
@@ -641,9 +650,13 @@ func (st *State) watchKind(ctx context.Context, resourceKind resource.Kind, sing
 					return
 				}
 			case aggCh != nil:
+
 				if !channel.SendWithContext(ctx, aggCh, []state.Event{event}) {
+					log.Printf("DIDN'T SEND BOOKMARK %s: failed to send bookmark for %q with revision %d", opName, resourceKind, revision)
 					return
 				}
+
+				log.Printf("SENT BOOKMARK %s: sent bookmark for %q with revision %d", opName, resourceKind, revision)
 			}
 		}
 
